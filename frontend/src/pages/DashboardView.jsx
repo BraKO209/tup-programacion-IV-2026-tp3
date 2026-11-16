@@ -54,9 +54,9 @@ export default function DashboardView({ setCurrentView }) {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Panel de Control General</h1>
+          <h1 className="page-title">Panel Principal</h1>
           <p className="page-description">
-            Resumen en tiempo real del estado de la flota, conductores activos y kilómetros recorridos.
+            Resumen de vehículos, conductores activos y kilómetros recorridos.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>

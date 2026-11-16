@@ -1,8 +1,6 @@
 import { pool } from '../config/db.js';
 
-/**
- * Obtener todos los viajes (permite filtrar por vehiculo_id y/o conductor_id)
- */
+// Listar viajes (con filtro opcional por vehículo o conductor)
 export const getAllViajes = async (req, res) => {
   const { vehiculo_id, conductor_id } = req.query;
 
@@ -38,7 +36,7 @@ export const getAllViajes = async (req, res) => {
 
     const [rows] = await pool.query(query, params);
 
-    // Calcular el total de kilómetros del conjunto devuelto
+    // Sumar el total de kilómetros
     const totalKilometros = rows.reduce((acc, curr) => acc + Number(curr.kilometros || 0), 0);
 
     return res.status(200).json({
@@ -47,17 +45,15 @@ export const getAllViajes = async (req, res) => {
       viajes: rows
     });
   } catch (error) {
-    console.error('Error en getAllViajes:', error);
+    console.error('Error al listar viajes:', error);
     return res.status(500).json({
-      error: 'Error interno al consultar los viajes.',
+      error: 'Error interno del servidor al consultar viajes.',
       details: error.message
     });
   }
 };
 
-/**
- * Obtener un viaje específico por ID con datos del vehículo y conductor
- */
+// Obtener un viaje por ID
 export const getViajeById = async (req, res) => {
   const { id } = req.params;
 
@@ -87,7 +83,7 @@ export const getViajeById = async (req, res) => {
 
     return res.status(200).json(rows[0]);
   } catch (error) {
-    console.error('Error en getViajeById:', error);
+    console.error('Error al obtener viaje:', error);
     return res.status(500).json({
       error: 'Error interno al consultar el viaje.',
       details: error.message
@@ -95,9 +91,7 @@ export const getViajeById = async (req, res) => {
   }
 };
 
-/**
- * Crear un nuevo viaje
- */
+// Crear un nuevo viaje
 export const createViaje = async (req, res) => {
   const {
     vehiculo_id,
@@ -111,33 +105,31 @@ export const createViaje = async (req, res) => {
   } = req.body;
 
   try {
-    // 1. Verificar existencia del vehículo
-    const [vehiculos] = await pool.query('SELECT id, marca, modelo, patente FROM vehiculos WHERE id = ?', [vehiculo_id]);
+    // 1. Verificar vehículo
+    const [vehiculos] = await pool.query('SELECT id FROM vehiculos WHERE id = ?', [vehiculo_id]);
     if (vehiculos.length === 0) {
       return res.status(404).json({
-        error: `No existe ningún vehículo registrado con el ID ${vehiculo_id}.`
+        error: `No existe el vehículo con ID ${vehiculo_id}.`
       });
     }
 
-    // 2. Verificar existencia del conductor
+    // 2. Verificar conductor
     const [conductores] = await pool.query('SELECT id, nombre, apellido, fecha_vencimiento_licencia FROM conductores WHERE id = ?', [conductor_id]);
     if (conductores.length === 0) {
       return res.status(404).json({
-        error: `No existe ningún conductor registrado con el ID ${conductor_id}.`
+        error: `No existe el conductor con ID ${conductor_id}.`
       });
     }
 
-    // Opcional: Advertencia o validación de licencia vencida
+    // Comprobar vigencia de la licencia
     const conductor = conductores[0];
-    const fechaSalidaDate = new Date(fecha_salida);
-    const vencimientoLicencia = new Date(conductor.fecha_vencimiento_licencia);
-    if (vencimientoLicencia < fechaSalidaDate) {
+    if (new Date(conductor.fecha_vencimiento_licencia) < new Date(fecha_salida)) {
       return res.status(400).json({
-        error: `No se puede asignar el viaje: la licencia del conductor ${conductor.nombre} ${conductor.apellido} está vencida para la fecha de salida seleccionada (${conductor.fecha_vencimiento_licencia}).`
+        error: `La licencia del conductor ${conductor.nombre} ${conductor.apellido} está vencida para la fecha de salida.`
       });
     }
 
-    // 3. Insertar el viaje
+    // 3. Insertar viaje
     const [result] = await pool.query(
       `INSERT INTO viajes 
        (vehiculo_id, conductor_id, fecha_salida, fecha_llegada, origen, destino, kilometros, observaciones)
@@ -154,8 +146,7 @@ export const createViaje = async (req, res) => {
       ]
     );
 
-    // Recuperar con datos completos
-    const [nuevoViaje] = await pool.query(
+    const [nuevo] = await pool.query(
       `SELECT vi.*,
               v.marca AS vehiculo_marca,
               v.modelo AS vehiculo_modelo,
@@ -170,21 +161,19 @@ export const createViaje = async (req, res) => {
     );
 
     return res.status(201).json({
-      message: 'Viaje registrado exitosamente.',
-      viaje: nuevoViaje[0]
+      message: 'Viaje registrado con éxito.',
+      viaje: nuevo[0]
     });
   } catch (error) {
-    console.error('Error en createViaje:', error);
+    console.error('Error al registrar viaje:', error);
     return res.status(500).json({
-      error: 'Error interno al registrar el viaje.',
+      error: 'Error interno al guardar el viaje.',
       details: error.message
     });
   }
 };
 
-/**
- * Actualizar un viaje existente
- */
+// Modificar un viaje
 export const updateViaje = async (req, res) => {
   const { id } = req.params;
   const {
@@ -199,28 +188,22 @@ export const updateViaje = async (req, res) => {
   } = req.body;
 
   try {
-    // 1. Verificar si existe el viaje
-    const [viajeActual] = await pool.query('SELECT id FROM viajes WHERE id = ?', [id]);
-    if (viajeActual.length === 0) {
+    const [actual] = await pool.query('SELECT id FROM viajes WHERE id = ?', [id]);
+    if (actual.length === 0) {
       return res.status(404).json({
-        error: `No se encontró ningún viaje con el ID ${id} para actualizar.`
+        error: `No se encontró ningún viaje con el ID ${id}.`
       });
     }
 
-    // 2. Verificar vehículo
+    // Validar existencia de vehículo y conductor
     const [vehiculos] = await pool.query('SELECT id FROM vehiculos WHERE id = ?', [vehiculo_id]);
     if (vehiculos.length === 0) {
-      return res.status(404).json({
-        error: `No existe ningún vehículo registrado con el ID ${vehiculo_id}.`
-      });
+      return res.status(404).json({ error: `No existe el vehículo con ID ${vehiculo_id}.` });
     }
 
-    // 3. Verificar conductor
-    const [conductores] = await pool.query('SELECT id, nombre, apellido, fecha_vencimiento_licencia FROM conductores WHERE id = ?', [conductor_id]);
+    const [conductores] = await pool.query('SELECT id FROM conductores WHERE id = ?', [conductor_id]);
     if (conductores.length === 0) {
-      return res.status(404).json({
-        error: `No existe ningún conductor registrado con el ID ${conductor_id}.`
-      });
+      return res.status(404).json({ error: `No existe el conductor con ID ${conductor_id}.` });
     }
 
     await pool.query(
@@ -256,11 +239,11 @@ export const updateViaje = async (req, res) => {
     );
 
     return res.status(200).json({
-      message: 'Viaje actualizado exitosamente.',
+      message: 'Viaje actualizado con éxito.',
       viaje: actualizado[0]
     });
   } catch (error) {
-    console.error('Error en updateViaje:', error);
+    console.error('Error al actualizar viaje:', error);
     return res.status(500).json({
       error: 'Error interno al actualizar el viaje.',
       details: error.message
@@ -268,9 +251,7 @@ export const updateViaje = async (req, res) => {
   }
 };
 
-/**
- * Eliminar un viaje
- */
+// Eliminar un viaje
 export const deleteViaje = async (req, res) => {
   const { id } = req.params;
 
@@ -285,10 +266,10 @@ export const deleteViaje = async (req, res) => {
     await pool.query('DELETE FROM viajes WHERE id = ?', [id]);
 
     return res.status(200).json({
-      message: `Viaje con ID ${id} eliminado exitosamente.`
+      message: `Viaje con ID ${id} eliminado con éxito.`
     });
   } catch (error) {
-    console.error('Error en deleteViaje:', error);
+    console.error('Error al eliminar viaje:', error);
     return res.status(500).json({
       error: 'Error interno al eliminar el viaje.',
       details: error.message
@@ -296,9 +277,7 @@ export const deleteViaje = async (req, res) => {
   }
 };
 
-/**
- * Consulta de historial de viajes por vehículo y cálculo total de kilómetros
- */
+// Historial de viajes por vehículo y cálculo total de km
 export const getHistorialByVehiculo = async (req, res) => {
   const { id } = req.params;
 
@@ -306,7 +285,7 @@ export const getHistorialByVehiculo = async (req, res) => {
     const [vehiculos] = await pool.query('SELECT * FROM vehiculos WHERE id = ?', [id]);
     if (vehiculos.length === 0) {
       return res.status(404).json({
-        error: `No se encontró ningún vehículo con el ID ${id}.`
+        error: `No se encontró el vehículo con ID ${id}.`
       });
     }
 
@@ -331,7 +310,7 @@ export const getHistorialByVehiculo = async (req, res) => {
       historial_viajes: viajes
     });
   } catch (error) {
-    console.error('Error en getHistorialByVehiculo:', error);
+    console.error('Error al consultar historial del vehículo:', error);
     return res.status(500).json({
       error: 'Error interno al consultar el historial del vehículo.',
       details: error.message
@@ -339,9 +318,7 @@ export const getHistorialByVehiculo = async (req, res) => {
   }
 };
 
-/**
- * Consulta de historial de viajes por conductor y cálculo total de kilómetros
- */
+// Historial de viajes por conductor y cálculo total de km
 export const getHistorialByConductor = async (req, res) => {
   const { id } = req.params;
 
@@ -349,7 +326,7 @@ export const getHistorialByConductor = async (req, res) => {
     const [conductores] = await pool.query('SELECT * FROM conductores WHERE id = ?', [id]);
     if (conductores.length === 0) {
       return res.status(404).json({
-        error: `No se encontró ningún conductor con el ID ${id}.`
+        error: `No se encontró el conductor con ID ${id}.`
       });
     }
 
@@ -374,7 +351,7 @@ export const getHistorialByConductor = async (req, res) => {
       historial_viajes: viajes
     });
   } catch (error) {
-    console.error('Error en getHistorialByConductor:', error);
+    console.error('Error al consultar historial del conductor:', error);
     return res.status(500).json({
       error: 'Error interno al consultar el historial del conductor.',
       details: error.message
@@ -382,12 +359,9 @@ export const getHistorialByConductor = async (req, res) => {
   }
 };
 
-/**
- * Reporte consolidado de totales de kilómetros por vehículo y conductor
- */
+// Estadísticas de kilómetros por vehículo y conductor
 export const getEstadisticasKilometros = async (req, res) => {
   try {
-    // Totales por vehículo
     const [porVehiculo] = await pool.query(`
       SELECT v.id, v.marca, v.modelo, v.patente,
              COUNT(vi.id) AS total_viajes,
@@ -398,7 +372,6 @@ export const getEstadisticasKilometros = async (req, res) => {
       ORDER BY total_kilometros DESC
     `);
 
-    // Totales por conductor
     const [porConductor] = await pool.query(`
       SELECT c.id, c.nombre, c.apellido, c.numero_documento, c.numero_licencia,
              COUNT(vi.id) AS total_viajes,
@@ -409,7 +382,6 @@ export const getEstadisticasKilometros = async (req, res) => {
       ORDER BY total_kilometros DESC
     `);
 
-    // Total general de kilómetros
     const [general] = await pool.query(`
       SELECT COUNT(id) AS total_viajes,
              COALESCE(SUM(kilometros), 0) AS total_kilometros_empresa
@@ -422,9 +394,9 @@ export const getEstadisticasKilometros = async (req, res) => {
       kilometros_por_conductor: porConductor
     });
   } catch (error) {
-    console.error('Error en getEstadisticasKilometros:', error);
+    console.error('Error en estadísticas de kilómetros:', error);
     return res.status(500).json({
-      error: 'Error al generar las estadísticas de kilómetros.',
+      error: 'Error interno al generar estadísticas de kilómetros.',
       details: error.message
     });
   }

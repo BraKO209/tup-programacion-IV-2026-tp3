@@ -2,32 +2,30 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../config/db.js';
 
-/**
- * Registro de un nuevo usuario
- */
+// Registro de un nuevo usuario
 export const register = async (req, res) => {
   const { nombre, email, password } = req.body;
 
   try {
-    // Verificar si el correo ya está registrado
+    // Verificamos si el correo ya existe
     const [existing] = await pool.query('SELECT id FROM usuarios WHERE email = ?', [email]);
     if (existing.length > 0) {
       return res.status(400).json({
-        error: 'El correo electrónico ya se encuentra registrado.'
+        error: 'El correo electrónico ya está registrado.'
       });
     }
 
-    // Hashear contraseña con bcrypt
+    // Hashear la contraseña con bcrypt
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Guardar usuario en la base de datos
+    // Guardar el nuevo usuario en MySQL
     const [result] = await pool.query(
       'INSERT INTO usuarios (nombre, email, password) VALUES (?, ?, ?)',
       [nombre, email, hashedPassword]
     );
 
     return res.status(201).json({
-      message: 'Usuario registrado correctamente.',
+      message: 'Usuario registrado con éxito.',
       usuario: {
         id: result.insertId,
         nombre,
@@ -35,17 +33,15 @@ export const register = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error en register:', error);
+    console.error('Error al registrar usuario:', error);
     return res.status(500).json({
-      error: 'Error interno al registrar el usuario.',
+      error: 'Error interno del servidor al registrar el usuario.',
       details: error.message
     });
   }
 };
 
-/**
- * Inicio de sesión de usuario y generación de token JWT (expiración: 4 horas)
- */
+// Login de usuario y generación de token JWT (expira a las 4 horas)
 export const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -53,21 +49,21 @@ export const login = async (req, res) => {
     const [users] = await pool.query('SELECT * FROM usuarios WHERE email = ?', [email]);
     if (users.length === 0) {
       return res.status(401).json({
-        error: 'Credenciales inválidas. Correo o contraseña incorrectos.'
+        error: 'Credenciales inválidas. Email o contraseña incorrectos.'
       });
     }
 
     const user = users[0];
 
-    // Comparar contraseña con el hash de bcrypt
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
+    // Comparar la contraseña con el hash de bcrypt
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
       return res.status(401).json({
-        error: 'Credenciales inválidas. Correo o contraseña incorrectos.'
+        error: 'Credenciales inválidas. Email o contraseña incorrectos.'
       });
     }
 
-    // Crear token JWT con expiración fija a 4 horas
+    // Generar el token con 4 horas de expiración
     const secret = process.env.JWT_SECRET || 'super_secreto_utn_prog4_2026_jwt_key';
     const token = jwt.sign(
       {
@@ -80,9 +76,8 @@ export const login = async (req, res) => {
     );
 
     return res.status(200).json({
-      message: 'Inicio de sesión exitoso.',
+      message: 'Sesión iniciada con éxito.',
       token,
-      expiresIn: '4 horas',
       usuario: {
         id: user.id,
         nombre: user.nombre,
@@ -92,15 +87,13 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error('Error en login:', error);
     return res.status(500).json({
-      error: 'Error interno al iniciar sesión.',
+      error: 'Error interno del servidor al iniciar sesión.',
       details: error.message
     });
   }
 };
 
-/**
- * Obtener perfil del usuario autenticado actual
- */
+// Obtener perfil del usuario autenticado
 export const profile = async (req, res) => {
   return res.status(200).json({
     usuario: req.user

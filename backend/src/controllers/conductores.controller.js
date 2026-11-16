@@ -1,8 +1,6 @@
 import { pool } from '../config/db.js';
 
-/**
- * Obtener todos los conductores
- */
+// Listar todos los conductores con sus métricas
 export const getAllConductores = async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -16,17 +14,15 @@ export const getAllConductores = async (req, res) => {
     );
     return res.status(200).json(rows);
   } catch (error) {
-    console.error('Error en getAllConductores:', error);
+    console.error('Error al listar conductores:', error);
     return res.status(500).json({
-      error: 'Error interno al consultar los conductores.',
+      error: 'Error interno del servidor al consultar conductores.',
       details: error.message
     });
   }
 };
 
-/**
- * Obtener un conductor por ID
- */
+// Obtener un conductor por ID
 export const getConductorById = async (req, res) => {
   const { id } = req.params;
 
@@ -50,7 +46,7 @@ export const getConductorById = async (req, res) => {
 
     return res.status(200).json(rows[0]);
   } catch (error) {
-    console.error('Error en getConductorById:', error);
+    console.error('Error al obtener conductor:', error);
     return res.status(500).json({
       error: 'Error interno al consultar el conductor.',
       details: error.message
@@ -58,9 +54,7 @@ export const getConductorById = async (req, res) => {
   }
 };
 
-/**
- * Crear un nuevo conductor
- */
+// Crear un nuevo conductor
 export const createConductor = async (req, res) => {
   const {
     nombre,
@@ -72,18 +66,18 @@ export const createConductor = async (req, res) => {
   } = req.body;
 
   try {
-    // Comprobar si el documento ya existe
+    // Validar que el DNI no esté duplicado
     const [dniExistente] = await pool.query(
       'SELECT id FROM conductores WHERE numero_documento = ?',
       [numero_documento.trim()]
     );
     if (dniExistente.length > 0) {
       return res.status(400).json({
-        error: `El número de documento "${numero_documento}" ya está registrado.`
+        error: `El documento "${numero_documento}" ya está registrado.`
       });
     }
 
-    // Comprobar si la licencia ya existe
+    // Validar que la licencia no esté duplicada
     const [licenciaExistente] = await pool.query(
       'SELECT id FROM conductores WHERE numero_licencia = ?',
       [numero_licencia.trim()]
@@ -111,21 +105,19 @@ export const createConductor = async (req, res) => {
     const [nuevo] = await pool.query('SELECT * FROM conductores WHERE id = ?', [result.insertId]);
 
     return res.status(201).json({
-      message: 'Conductor registrado exitosamente.',
+      message: 'Conductor registrado con éxito.',
       conductor: nuevo[0]
     });
   } catch (error) {
-    console.error('Error en createConductor:', error);
+    console.error('Error al crear conductor:', error);
     return res.status(500).json({
-      error: 'Error interno al registrar el conductor.',
+      error: 'Error interno al guardar el conductor.',
       details: error.message
     });
   }
 };
 
-/**
- * Actualizar un conductor existente
- */
+// Modificar un conductor
 export const updateConductor = async (req, res) => {
   const { id } = req.params;
   const {
@@ -138,33 +130,32 @@ export const updateConductor = async (req, res) => {
   } = req.body;
 
   try {
-    // Verificar si existe el conductor
-    const [conductorActual] = await pool.query('SELECT id FROM conductores WHERE id = ?', [id]);
-    if (conductorActual.length === 0) {
+    const [actual] = await pool.query('SELECT id FROM conductores WHERE id = ?', [id]);
+    if (actual.length === 0) {
       return res.status(404).json({
-        error: `No se encontró ningún conductor con el ID ${id} para actualizar.`
+        error: `No se encontró ningún conductor con el ID ${id}.`
       });
     }
 
-    // Verificar si el documento está en uso por otro conductor
-    const [dniExistente] = await pool.query(
+    // DNI en otro conductor
+    const [dniRepetido] = await pool.query(
       'SELECT id FROM conductores WHERE numero_documento = ? AND id != ?',
       [numero_documento.trim(), id]
     );
-    if (dniExistente.length > 0) {
+    if (dniRepetido.length > 0) {
       return res.status(400).json({
-        error: `El número de documento "${numero_documento}" ya está en uso por otro conductor.`
+        error: `El documento "${numero_documento}" ya pertenece a otro conductor.`
       });
     }
 
-    // Verificar si la licencia está en uso por otro conductor
-    const [licenciaExistente] = await pool.query(
+    // Licencia en otro conductor
+    const [licenciaRepetida] = await pool.query(
       'SELECT id FROM conductores WHERE numero_licencia = ? AND id != ?',
       [numero_licencia.trim(), id]
     );
-    if (licenciaExistente.length > 0) {
+    if (licenciaRepetida.length > 0) {
       return res.status(400).json({
-        error: `El número de licencia "${numero_licencia}" ya está en uso por otro conductor.`
+        error: `La licencia "${numero_licencia}" ya pertenece a otro conductor.`
       });
     }
 
@@ -187,11 +178,11 @@ export const updateConductor = async (req, res) => {
     const [actualizado] = await pool.query('SELECT * FROM conductores WHERE id = ?', [id]);
 
     return res.status(200).json({
-      message: 'Conductor actualizado correctamente.',
+      message: 'Conductor actualizado con éxito.',
       conductor: actualizado[0]
     });
   } catch (error) {
-    console.error('Error en updateConductor:', error);
+    console.error('Error al actualizar conductor:', error);
     return res.status(500).json({
       error: 'Error interno al actualizar el conductor.',
       details: error.message
@@ -199,9 +190,7 @@ export const updateConductor = async (req, res) => {
   }
 };
 
-/**
- * Eliminar un conductor
- */
+// Eliminar un conductor
 export const deleteConductor = async (req, res) => {
   const { id } = req.params;
 
@@ -217,17 +206,17 @@ export const deleteConductor = async (req, res) => {
     const [viajes] = await pool.query('SELECT id FROM viajes WHERE conductor_id = ? LIMIT 1', [id]);
     if (viajes.length > 0) {
       return res.status(400).json({
-        error: 'No se puede eliminar el conductor porque posee viajes asociados en el sistema.'
+        error: 'No se puede eliminar el conductor porque tiene viajes asociados en el sistema.'
       });
     }
 
     await pool.query('DELETE FROM conductores WHERE id = ?', [id]);
 
     return res.status(200).json({
-      message: `Conductor con ID ${id} (${conductor[0].nombre} ${conductor[0].apellido} - DNI ${conductor[0].numero_documento}) eliminado correctamente.`
+      message: `Conductor con ID ${id} eliminado con éxito.`
     });
   } catch (error) {
-    console.error('Error en deleteConductor:', error);
+    console.error('Error al eliminar conductor:', error);
     return res.status(500).json({
       error: 'Error interno al eliminar el conductor.',
       details: error.message

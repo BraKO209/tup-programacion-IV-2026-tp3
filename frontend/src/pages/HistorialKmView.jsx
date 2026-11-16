@@ -88,9 +88,9 @@ export default function HistorialKmView({ preselectedVehiculoId = null, preselec
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Historial de Viajes y Cálculo de Kilómetros</h1>
+          <h1 className="page-title">Historial de Viajes y Kilómetros</h1>
           <p className="page-description">
-            Cómputo detallado de distancias recorridas por unidad o chofer, con trazabilidad completa de rutas.
+            Consulta los viajes realizados por cada vehículo o conductor y el cálculo total de kilómetros.
           </p>
         </div>
       </div>
