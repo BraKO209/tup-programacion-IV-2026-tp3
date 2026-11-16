@@ -1,0 +1,272 @@
+### ==========================================================
+### Archivo de Pruebas HTTP - TP3 Programación IV
+### API Gestión de Vehículos, Conductores y Viajes
+### ==========================================================
+
+@baseUrl = http://localhost:3000
+@token = {{login.response.body.token}}
+
+### ----------------------------------------------------------
+### 0. VERIFICAR ESTADO DE LA API
+### ----------------------------------------------------------
+GET {{baseUrl}}/
+Accept: application/json
+
+### ----------------------------------------------------------
+### 1. AUTENTICACIÓN Y AUTORIZACIÓN
+### ----------------------------------------------------------
+
+### 1.1 Registro de nuevo usuario
+# @name register
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "nombre": "Federico Merlo",
+  "email": "federico@transporte.com",
+  "password": "Password123!"
+}
+
+### 1.2 Registro con error de validación (Password corto) -> 400
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "nombre": "A",
+  "email": "correo-invalido",
+  "password": "123"
+}
+
+### 1.3 Inicio de sesión (Login con usuario inicial)
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@transporte.com",
+  "password": "Admin1234!"
+}
+
+### 1.4 Inicio de sesión con credenciales incorrectas -> 401
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@transporte.com",
+  "password": "PasswordIncorrecto"
+}
+
+### 1.5 Obtener perfil autenticado (Usa el token obtenido en el login)
+GET {{baseUrl}}/api/auth/profile
+Authorization: Bearer {{token}}
+
+### 1.6 Intento de acceso sin token a ruta protegida -> 401 No Autorizado
+GET {{baseUrl}}/api/vehiculos
+
+### ----------------------------------------------------------
+### 2. GESTIÓN DE VEHÍCULOS (CRUD)
+### ----------------------------------------------------------
+
+### 2.1 Listar todos los vehículos
+GET {{baseUrl}}/api/vehiculos
+Authorization: Bearer {{token}}
+
+### 2.2 Obtener vehículo por ID
+GET {{baseUrl}}/api/vehiculos/1
+Authorization: Bearer {{token}}
+
+### 2.3 Obtener vehículo inexistente -> 404
+GET {{baseUrl}}/api/vehiculos/9999
+Authorization: Bearer {{token}}
+
+### 2.4 Crear nuevo vehículo
+# @name nuevoVehiculo
+POST {{baseUrl}}/api/vehiculos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "marca": "Iveco",
+  "modelo": "Stralis Hi-Way",
+  "patente": "AG789XY",
+  "anio": 2024,
+  "capacidad_carga": 26000.50
+}
+
+### 2.5 Crear vehículo con error de validación (patente inválida o vacía) -> 400
+POST {{baseUrl}}/api/vehiculos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "marca": "",
+  "modelo": "Camion",
+  "patente": "12",
+  "anio": 1800,
+  "capacidad_carga": -5
+}
+
+### 2.6 Actualizar vehículo existente
+PUT {{baseUrl}}/api/vehiculos/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "marca": "Mercedes-Benz",
+  "modelo": "Actros 2645 Plus",
+  "patente": "AE123CD",
+  "anio": 2024,
+  "capacidad_carga": 27500.00
+}
+
+### 2.7 Eliminar un vehículo sin viajes asociados
+# (Primero creamos uno temporal o usamos uno sin viajes)
+DELETE {{baseUrl}}/api/vehiculos/{{nuevoVehiculo.response.body.vehiculo.id}}
+Authorization: Bearer {{token}}
+
+### ----------------------------------------------------------
+### 3. GESTIÓN DE CONDUCTORES (CRUD)
+### ----------------------------------------------------------
+
+### 3.1 Listar todos los conductores
+GET {{baseUrl}}/api/conductores
+Authorization: Bearer {{token}}
+
+### 3.2 Obtener conductor por ID
+GET {{baseUrl}}/api/conductores/1
+Authorization: Bearer {{token}}
+
+### 3.3 Obtener conductor inexistente -> 404
+GET {{baseUrl}}/api/conductores/9999
+Authorization: Bearer {{token}}
+
+### 3.4 Crear nuevo conductor
+# @name nuevoConductor
+POST {{baseUrl}}/api/conductores
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Roberto",
+  "apellido": "Alonso",
+  "numero_documento": "38999888",
+  "numero_licencia": "LIC-AR-00999",
+  "fecha_alta_licencia": "2020-01-10",
+  "fecha_vencimiento_licencia": "2028-01-10"
+}
+
+### 3.5 Crear conductor con fechas inconsistentes -> 400
+POST {{baseUrl}}/api/conductores
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Conductor",
+  "apellido": "Invalido",
+  "numero_documento": "12345678",
+  "numero_licencia": "LIC-FAIL-01",
+  "fecha_alta_licencia": "2025-01-01",
+  "fecha_vencimiento_licencia": "2020-01-01"
+}
+
+### 3.6 Actualizar conductor
+PUT {{baseUrl}}/api/conductores/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Carlos Alberto",
+  "apellido": "González",
+  "numero_documento": "32456789",
+  "numero_licencia": "LIC-AR-00129",
+  "fecha_alta_licencia": "2018-05-10",
+  "fecha_vencimiento_licencia": "2029-05-10"
+}
+
+### 3.7 Eliminar conductor sin viajes
+DELETE {{baseUrl}}/api/conductores/{{nuevoConductor.response.body.conductor.id}}
+Authorization: Bearer {{token}}
+
+### ----------------------------------------------------------
+### 4. GESTIÓN DE VIAJES, HISTORIALES Y KILÓMETROS
+### ----------------------------------------------------------
+
+### 4.1 Listar todos los viajes
+GET {{baseUrl}}/api/viajes
+Authorization: Bearer {{token}}
+
+### 4.2 Filtrar viajes por vehículo (ID 1)
+GET {{baseUrl}}/api/viajes?vehiculo_id=1
+Authorization: Bearer {{token}}
+
+### 4.3 Filtrar viajes por conductor (ID 1)
+GET {{baseUrl}}/api/viajes?conductor_id=1
+Authorization: Bearer {{token}}
+
+### 4.4 Obtener viaje por ID
+GET {{baseUrl}}/api/viajes/1
+Authorization: Bearer {{token}}
+
+### 4.5 Registrar un nuevo viaje asociando vehículo y conductor
+# @name nuevoViaje
+POST {{baseUrl}}/api/viajes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vehiculo_id": 1,
+  "conductor_id": 2,
+  "fecha_salida": "2026-11-20T08:00:00",
+  "fecha_llegada": "2026-11-20T21:00:00",
+  "origen": "La Rioja (Parque Industrial)",
+  "destino": "San Juan (Centro de Distribución)",
+  "kilometros": 410.20,
+  "observaciones": "Transporte de materiales de construcción."
+}
+
+### 4.6 Crear viaje con fechas inconsistentes -> 400
+POST {{baseUrl}}/api/viajes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vehiculo_id": 1,
+  "conductor_id": 1,
+  "fecha_salida": "2026-11-20T10:00:00",
+  "fecha_llegada": "2026-11-19T08:00:00",
+  "origen": "Origen",
+  "destino": "Destino",
+  "kilometros": 100
+}
+
+### 4.7 Actualizar viaje
+PUT {{baseUrl}}/api/viajes/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vehiculo_id": 1,
+  "conductor_id": 1,
+  "fecha_salida": "2026-11-01T08:00:00",
+  "fecha_llegada": "2026-11-01T20:30:00",
+  "origen": "La Rioja (Capital)",
+  "destino": "Córdoba (Centro Logístico)",
+  "kilometros": 445.00,
+  "observaciones": "Entrega completada y firmada en destino."
+}
+
+### 4.8 Historial de viajes por vehículo y cálculo total de km
+GET {{baseUrl}}/api/viajes/historial/vehiculo/1
+Authorization: Bearer {{token}}
+
+### 4.9 Historial de viajes por conductor y cálculo total de km
+GET {{baseUrl}}/api/viajes/historial/conductor/1
+Authorization: Bearer {{token}}
+
+### 4.10 Reporte y estadísticas generales de kilómetros
+GET {{baseUrl}}/api/viajes/estadisticas/kilometros
+Authorization: Bearer {{token}}
+
+### 4.11 Eliminar un viaje
+DELETE {{baseUrl}}/api/viajes/{{nuevoViaje.response.body.viaje.id}}
+Authorization: Bearer {{token}}
