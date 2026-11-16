@@ -7,6 +7,17 @@
 
 ---
 
+## 🌐 URLs de Acceso Rápido
+
+> [!IMPORTANT]
+> **Diferencia entre Frontend y Backend al abrir en el navegador:**
+> - 💻 **Frontend (Interfaz Gráfica de Usuario):** [http://localhost:5173](http://localhost:5173)  
+>   *(Aquí está la aplicación web interactiva con la pantalla principal, formularios de vehículos y conductores, registro de viajes, tablas y cálculo de kilómetros).*
+> - ⚙️ **Backend (API REST JSON):** [http://localhost:3000](http://localhost:3000)  
+>   *(Es el servidor que procesa los datos y devuelve respuestas en JSON para las peticiones de la aplicación).*
+
+---
+
 ## 📋 Descripción del Proyecto
 
 Aplicación web integral (Backend API REST + Frontend Single Page Application) desarrollada según las especificaciones del Trabajo Práctico N.° 3 de Programación IV. Permite gestionar la flota de vehículos de una empresa de transporte, sus conductores habilitados, la asignación de viajes y el cómputo automático de distancias e historial de kilometraje.
@@ -159,12 +170,15 @@ cd frontend
 npm install
 npm run dev
 ```
-La aplicación web estará disponible en `http://localhost:5173`.
+La aplicación web visual e interactiva estará disponible en:  
+👉 **[http://localhost:5173](http://localhost:5173)**
 
 ---
 
-## 👤 Usuario de Demostración
-El script de inicialización crea un usuario administrador para pruebas inmediatas:
+## 👤 Usuario de Demostración para Pruebas
+El sistema cuenta con un usuario inicial precargado automáticamente en MySQL para ingresar de inmediato:
 - **Correo Electrónico:** `admin@transporte.com`
 - **Contraseña:** `Admin1234!`
-- **Vigencia del Token:** 4 horas.
+- **Vigencia del Token JWT:** 4 horas.
+
+También es posible registrar nuevos usuarios desde el botón *"Iniciar Sesión / Registro"* en la barra superior.
