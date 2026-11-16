@@ -72,3 +72,4 @@ export default function PublicHome({ onOpenAuth }) {
     </div>
   );
 }
+

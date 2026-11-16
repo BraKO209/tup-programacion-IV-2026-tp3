@@ -374,3 +374,4 @@ export default function VehiculosView({ onSelectVehiculoHistorial }) {
     </div>
   );
 }
+

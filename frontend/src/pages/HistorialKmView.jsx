@@ -450,3 +450,4 @@ export default function HistorialKmView({ preselectedVehiculoId = null, preselec
     </div>
   );
 }
+
